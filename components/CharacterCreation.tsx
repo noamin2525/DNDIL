@@ -3,7 +3,7 @@ import { RACES, CLASSES, GENDERS } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
 interface CharacterCreationProps {
-  onCreateCharacter: (name: string, race: string, characterClass: string, gender: string) => void;
+  onCreateCharacter: (name: string, race: string, characterClass: string, gender: string, customization: string) => void;
   isLoading: boolean;
   error: string | null;
   onLoadGame: () => void;
@@ -15,11 +15,12 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onCreateCharacter
   const [race, setRace] = useState(RACES[0]);
   const [characterClass, setCharacterClass] = useState(CLASSES[0]);
   const [gender, setGender] = useState(GENDERS[0]);
+  const [customization, setCustomization] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      onCreateCharacter(name.trim(), race, characterClass, gender);
+      onCreateCharacter(name.trim(), race, characterClass, gender, customization.trim());
     }
   };
 
@@ -45,40 +46,54 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onCreateCharacter
             />
           </div>
 
-          <div>
-            <label htmlFor="race" className="block text-sm font-medium text-yellow-300 mb-1">גזע</label>
-            <select
-              id="race"
-              value={race}
-              onChange={(e) => setRace(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
-              {RACES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="race" className="block text-sm font-medium text-yellow-300 mb-1">גזע</label>
+              <select
+                id="race"
+                value={race}
+                onChange={(e) => setRace(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                {RACES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium text-yellow-300 mb-1">מין</label>
+              <select
+                id="gender"
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="class" className="block text-sm font-medium text-yellow-300 mb-1">מקצוע</label>
+              <select
+                id="class"
+                value={characterClass}
+                onChange={(e) => setCharacterClass(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="gender" className="block text-sm font-medium text-yellow-300 mb-1">מין</label>
-            <select
-              id="gender"
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
-              {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="class" className="block text-sm font-medium text-yellow-300 mb-1">מקצוע</label>
-            <select
-              id="class"
-              value={characterClass}
-              onChange={(e) => setCharacterClass(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            >
-              {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+           <div>
+            <label htmlFor="customization" className="block text-sm font-medium text-yellow-300 mb-1">תיאור חיצוני (אופציונלי)</label>
+            <textarea
+              id="customization"
+              value={customization}
+              onChange={(e) => setCustomization(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="לדוגמה: שיער אדום ארוך, עיניים ירוקות, צלקת מעל עין שמאל"
+              rows={2}
+            />
           </div>
           
           <button

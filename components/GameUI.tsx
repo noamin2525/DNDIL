@@ -77,13 +77,19 @@ const PartyMemberCard: React.FC<{ character: PlayerCharacter; isLeader: boolean 
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
             </div>
-            <div id={`character-details-${character.name}`} className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96 mt-3' : 'max-h-0'}`}>
+            <div id={`character-details-${character.name}`} className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[40rem] mt-3' : 'max-h-0'}`}>
                 <div className="border-t border-yellow-600/20 pt-3">
                     <div className="flex justify-around gap-2 mb-3">
                         <Stat icon={<StrengthIcon />} label="כוח" value={character.strength} />
                         <Stat icon={<DexterityIcon />} label="זריזות" value={character.dexterity} />
                         <Stat icon={<IntelligenceIcon />} label="חוכמה" value={character.intelligence} />
                     </div>
+                     {character.customization && (
+                      <div className="mb-3">
+                          <h4 className="text-sm font-bold text-yellow-300/80 mb-1">מראה:</h4>
+                          <p className="text-sm text-gray-300 italic">{character.customization}</p>
+                      </div>
+                    )}
                     <div>
                         <h4 className="text-sm font-bold text-yellow-300/80 mb-1">ציוד:</h4>
                         {character.inventory.length > 0 ? (
@@ -93,6 +99,10 @@ const PartyMemberCard: React.FC<{ character: PlayerCharacter; isLeader: boolean 
                         ) : (
                             <p className="text-sm text-gray-400 italic">אין פריטים.</p>
                         )}
+                    </div>
+                    <div className="mt-3">
+                        <h4 className="text-sm font-bold text-yellow-300/80 mb-1">סיפור רקע:</h4>
+                        <p className="text-sm text-gray-300 italic whitespace-pre-wrap">{character.backstory}</p>
                     </div>
                 </div>
             </div>
@@ -148,7 +158,6 @@ const getSenderConfig = (sender: string, partyNames: string[]) => {
   }
 };
 
-// FIX: Define the GameUIProps interface.
 interface GameUIProps {
   party: PlayerCharacter[];
   gameLog: GameLogEntry[];
@@ -159,9 +168,10 @@ interface GameUIProps {
   onRestart: () => void;
   onSaveGame: () => void;
   saveMessage: string | null;
+  onLogout: () => void;
 }
 
-export const GameUI: React.FC<GameUIProps> = ({ party, gameLog, isLoading, gameState, gameOverReason, onPlayerAction, onRestart, onSaveGame, saveMessage }) => {
+export const GameUI: React.FC<GameUIProps> = ({ party, gameLog, isLoading, gameState, gameOverReason, onPlayerAction, onRestart, onSaveGame, saveMessage, onLogout }) => {
   const [input, setInput] = useState('');
   const [activeTab, setActiveTab] = useState('log'); // For mobile view
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -263,6 +273,15 @@ export const GameUI: React.FC<GameUIProps> = ({ party, gameLog, isLoading, gameS
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v12l-5-3.5L5 16V4z" />
                   </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="התנתק"
+                  className="p-2 bg-red-600 text-white rounded-md hover:bg-red-500 transition-colors duration-300 disabled:bg-gray-500"
+                  disabled={isLoading}
+                >
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
                 </button>
             </form>
              {saveMessage && (

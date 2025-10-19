@@ -2,9 +2,11 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { GameState, PlayerCharacter, GameLogEntry, RACES, CLASSES, GENDERS } from './types';
 import { generateCharacter, getGameUpdate, generateCharacterImage, getInitialScenario } from './services/geminiService';
 import { saveGame, loadGame, hasSavedGame, clearSavedGame } from './services/storageService';
+import { getCurrentUser, logout } from './services/authService';
 import CharacterCreation from './components/CharacterCreation';
 import { GameUI } from './components/GameUI';
 import LoadingSpinner from './components/LoadingSpinner';
+import Auth from './components/Auth';
 
 // --- Party Assembly Component ---
 interface PartyAssemblyProps {
@@ -137,36 +139,61 @@ const PartyAssembly: React.FC<PartyAssemblyProps> = ({ mainCharacter, onFinalize
 
 // --- Main App Component ---
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState>(GameState.CHARACTER_CREATION);
   const [party, setParty] = useState<PlayerCharacter[]>([]);
   const [gameLog, setGameLog] = useState<GameLogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Start as true to check auth
   const [error, setError] = useState<string | null>(null);
   const [gameOverReason, setGameOverReason] = useState<string | null>(null);
   const [hasSave, setHasSave] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setHasSave(hasSavedGame());
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setHasSave(hasSavedGame(user));
+    }
+    setIsLoading(false);
   }, []);
 
-  const handleRestart = () => {
+  const resetGameState = () => {
     setGameState(GameState.CHARACTER_CREATION);
     setParty([]);
     setGameLog([]);
     setIsLoading(false);
     setError(null);
     setGameOverReason(null);
-    clearSavedGame();
+  };
+
+  const handleAuthSuccess = (username: string) => {
+    setCurrentUser(username);
+    setHasSave(hasSavedGame(username));
+    resetGameState();
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCurrentUser(null);
+    resetGameState();
     setHasSave(false);
   };
+
+  const handleRestart = () => {
+    if(currentUser) {
+      clearSavedGame(currentUser);
+      setHasSave(false);
+    }
+    resetGameState();
+  };
   
-  const handleCreateCharacter = useCallback(async (name: string, race: string, characterClass: string, gender: string) => {
+  const handleCreateCharacter = useCallback(async (name: string, race: string, characterClass: string, gender: string, customization: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const mainCharacter = await generateCharacter(name, race, characterClass, gender);
-      setParty([{...mainCharacter, imageUrl: ''}]); // set party with placeholder image
+      const mainCharacter = await generateCharacter(name, race, characterClass, gender, customization);
+      setParty([{...mainCharacter, imageUrl: ''}]);
       const imageUrl = await generateCharacterImage(mainCharacter);
       const finalCharacter = { ...mainCharacter, imageUrl };
       
@@ -187,12 +214,11 @@ const App: React.FC = () => {
         for (const companion of companionsToCreate) {
             const newCharacter = await generateCharacter('', companion.race, companion.class, companion.gender);
             finalParty.push({ ...newCharacter, imageUrl: '' });
-            setParty([...finalParty]); // Update party to show new member card with loader
+            setParty([...finalParty]);
 
             const imageUrl = await generateCharacterImage(newCharacter);
             const finalCompanion = {...newCharacter, imageUrl};
             
-            // Update the companion in finalParty and state
             finalParty[finalParty.length - 1] = finalCompanion;
             setParty([...finalParty]);
         }
@@ -216,7 +242,7 @@ const App: React.FC = () => {
   }, [party]);
 
   const handlePlayerAction = useCallback(async (action: string) => {
-    if (party.length === 0) return;
+    if (party.length === 0 || !currentUser) return;
 
     const mainCharacterName = party[0].name;
     const newLog: GameLogEntry[] = [...gameLog, { sender: mainCharacterName, message: action }];
@@ -252,34 +278,46 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [party, gameLog]);
+  }, [party, gameLog, currentUser]);
 
   const handleSaveGame = useCallback(() => {
+    if (!currentUser) return;
     if (gameState === GameState.PLAYING || gameState === GameState.GAME_OVER) {
-        saveGame(gameState, party, gameLog);
+        saveGame(currentUser, gameState, party, gameLog);
         setSaveMessage('המשחק נשמר!');
         setTimeout(() => setSaveMessage(null), 3000);
     }
-  }, [gameState, party, gameLog]);
+  }, [gameState, party, gameLog, currentUser]);
 
   const handleLoadGame = useCallback(() => {
-    const savedData = loadGame();
+    if (!currentUser) return;
+    const savedData = loadGame(currentUser);
     if (savedData) {
         setGameState(savedData.gameState);
         setParty(savedData.party);
         setGameLog(savedData.gameLog);
         
-        // FIX: Corrected typo from GAME_over to GAME_OVER
         if (savedData.gameState === GameState.GAME_OVER) {
           const lastSystemMessage = savedData.gameLog.filter(m => m.sender === 'System').pop();
           setGameOverReason(lastSystemMessage?.message || "המסע שלכם הגיע לסופו.");
         }
     } else {
         setError("לא נמצאה שמירה או שהשמירה פגומה.");
-        setHasSave(false); // Update state if save is corrupt
+        setHasSave(false);
     }
-  }, []);
+  }, [currentUser]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
 
   switch (gameState) {
     case GameState.CHARACTER_CREATION:
@@ -295,7 +333,7 @@ const App: React.FC = () => {
       if (party[0]) {
         return <PartyAssembly mainCharacter={party[0]} onFinalizeParty={handleFinalizeParty} isLoading={isLoading} error={error} party={party} />;
       }
-      break; // Fallthrough to loading if main character not ready
+      break; 
 
     case GameState.PLAYING:
     case GameState.GAME_OVER:
@@ -310,9 +348,10 @@ const App: React.FC = () => {
           onRestart={handleRestart}
           onSaveGame={handleSaveGame}
           saveMessage={saveMessage}
+          onLogout={handleLogout}
         />;
       }
-      break; // Fallthrough to loading if party not ready
+      break; 
   }
 
   return (

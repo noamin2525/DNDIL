@@ -22,8 +22,9 @@ const characterSchema = {
     strength: { type: Type.INTEGER },
     dexterity: { type: Type.INTEGER },
     intelligence: { type: Type.INTEGER },
+    customization: { type: Type.STRING, description: "תיאור קצר של מראה הדמות: צבע שיער, עיניים, סגנון לבוש." },
   },
-  required: ['name', 'race', 'class', 'gender', 'hp', 'maxHp', 'inventory', 'backstory', 'strength', 'dexterity', 'intelligence'],
+  required: ['name', 'race', 'class', 'gender', 'hp', 'maxHp', 'inventory', 'backstory', 'strength', 'dexterity', 'intelligence', 'customization'],
 };
 
 const geminiResponseSchema = {
@@ -61,7 +62,7 @@ const getSystemInstruction = (partySize: number) => `
 אל תוסיף \`\`\`json או כל סימון אחר מסביב לתגובת ה-JSON.
 `;
 
-export const generateCharacter = async (name: string, race: string, characterClass: string, gender: string): Promise<PlayerCharacter> => {
+export const generateCharacter = async (name: string, race: string, characterClass: string, gender: string, customizationNotes?: string): Promise<PlayerCharacter> => {
     try {
         const prompt = `
         צור דמות חדשה למשחק תפקידים.
@@ -69,8 +70,9 @@ export const generateCharacter = async (name: string, race: string, characterCla
         הגזע של הדמות הוא: ${race}
         המין של הדמות הוא: ${gender}
         המקצוע של הדמות הוא: ${characterClass}
+        ${customizationNotes ? `הערות למראה חיצוני מהשחקן: ${customizationNotes}`: ''}
 
-        צור לדמות סיפור רקע קצר ומעניין, קבע את נקודות החיים (HP) שלה, תכונות בסיסיות (כוח, זריזות, חוכמה) וציוד התחלתי.
+        צור לדמות סיפור רקע קצר ומעניין, קבע את נקודות החיים (HP) שלה, תכונות בסיסיות (כוח, זריזות, חוכמה), ציוד התחלתי, ותיאור קצר של המראה החיצוני שלה (שדה customization).
         התכונות צריכות להיות בין 8 ל-18. נקודות החיים צריכות להיות בין 10 ל-20 בהתבסס על המקצוע.
         ודא שהמין של הדמות שאתה מחזיר הוא בדיוק "${gender}".
         התשובה חייבת להיות בפורמט JSON בלבד, התואם לסכמה שסופקה.
@@ -96,7 +98,7 @@ export const generateCharacter = async (name: string, race: string, characterCla
 
 export const generateCharacterImage = async (character: PlayerCharacter): Promise<string> => {
     try {
-        const prompt = `Fantasy character portrait of a ${character.gender} ${character.race} ${character.class} named ${character.name}. Epic fantasy art style, detailed, Dungeons and Dragons character art.`;
+        const prompt = `Fantasy character portrait of a ${character.gender} ${character.race} ${character.class} named ${character.name}. ${character.customization}. Epic fantasy art style, detailed, Dungeons and Dragons character art.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',

@@ -18,6 +18,7 @@ export interface PlayerCharacter {
   strength: number;
   dexterity: number;
   intelligence: number;
+  customization: string;
   imageUrl?: string;
 }
 
